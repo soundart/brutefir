@@ -13,11 +13,8 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <errno.h>
-#ifdef __OS_LINUX__
 #include <malloc.h>
-#else
 #include <stddef.h>
-#endif
 
 #include "shmalloc.h"
 
@@ -65,7 +62,7 @@ shmalloc(size_t size)
     if (((ptrdiff_t)p & (ALIGNMENT - 1)) != 0) {
 	fprintf(stderr, "alignment error\n");
     }
-    return p;	
+    return p;
 }
 
 void *
@@ -80,7 +77,7 @@ shmalloc_id(int *shmid,
     if (shmid != NULL) {
         *shmid = -1;
     }
-    
+
     while ((n = shmget(key, size, IPC_CREAT | IPC_EXCL |
                        SHM_R | SHM_W)) == -1 && errno == EEXIST)
     {
@@ -90,7 +87,7 @@ shmalloc_id(int *shmid,
         print_shmget_error(size);
 	return NULL;
     }
-    
+
     if  ((p = shmat(n, 0, 0)) == (char *)-1) {
 	fprintf(stderr, "Failed to attach to shared memory (shmid %d): %s.\n",
                 n, strerror(errno));
@@ -102,12 +99,12 @@ shmalloc_id(int *shmid,
                 strerror(errno));
 	return NULL;
     }
-    
+
     key++;
 
     if (shmid != NULL) {
         *shmid = n;
     }
-    
+
     return p;
 }
