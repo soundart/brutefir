@@ -188,7 +188,7 @@ convolver_raw2cbuf(void *rawbuf,
     if (postprocess != NULL) {
         postprocess(next_cbuf, n_fft2, pp_arg);
     }
-        
+
     memcpy(&((uint8_t *)cbuf)[n_fft2 * realsize], next_cbuf, n_fft2 * realsize);
 }
 
@@ -266,11 +266,13 @@ convolver_convolve_add(void *input_cbuf,
     */
     switch (opt_code) {
 #ifdef __SSE__
+#warning Generating SSE code
     case OPT_CODE_SSE:
 	convolver_sse_convolve_add(input_cbuf, coeffs, output_cbuf,
                                    n_fft >> 3);
 	break;
 #ifdef __SSE2__
+#warning Generating SSE2 code
     case OPT_CODE_SSE2:
 	convolver_sse2_convolve_add(input_cbuf, coeffs, output_cbuf,
                                     n_fft >> 3);
@@ -279,17 +281,26 @@ convolver_convolve_add(void *input_cbuf,
 #endif
     default:
     case OPT_CODE_GCC:
+        // https://github.com/FFTW/fftw3/commit/950b153910f7f0dde9cc20cddeee5dc9048d25b7
+#if defined(__ARM_NEON__)
+#warning Generating NEON code
+        // no runtime config for ARM neon
+        convolver_sse_convolve_add(input_cbuf, coeffs, output_cbuf,
+                                   n_fft >> 3);
+#else
+#warning Generating  code
         if (realsize == 4) {
             convolve_addf(input_cbuf, coeffs, output_cbuf);
         } else {
             convolve_addd(input_cbuf, coeffs, output_cbuf);
         }
+#endif
     }
     /*
     {
 	real_t d1s, d2s, err, e;
 	int n;
-        
+
         d1s = _d[0] + _b[0] * _c[0];
         d2s = _d[4] + _b[4] * _c[4];
         for (n = 0; n < n_fft; n += 8) {
@@ -297,7 +308,7 @@ convolver_convolve_add(void *input_cbuf,
             _d[n+1] += _b[n+1] * _c[n+1] - _b[n+5] * _c[n+5];
             _d[n+2] += _b[n+2] * _c[n+2] - _b[n+6] * _c[n+6];
             _d[n+3] += _b[n+3] * _c[n+3] - _b[n+7] * _c[n+7];
-            
+
             _d[n+4] += _b[n+0] * _c[n+4] + _b[n+4] * _c[n+0];
             _d[n+5] += _b[n+1] * _c[n+5] + _b[n+5] * _c[n+1];
             _d[n+6] += _b[n+2] * _c[n+6] + _b[n+6] * _c[n+2];
@@ -348,14 +359,14 @@ convolver_crossfade_inplace(void *input_cbuf,
     if (realsize == 4) {
         f = 1.0 / (float)(n_fft2 - 1);
         for (n = 0; n < n_fft2; n++) {
-            ((float *)buffer_cbuf)[n] = 
+            ((float *)buffer_cbuf)[n] =
                 ((float *)crossfade_cbuf)[n] * (1.0 - f * (float)n) +
                 ((float *)buffer_cbuf)[n] * f * (float)n;
         }
     } else {
         d = 1.0 / (double)(n_fft2 - 1);
         for (n = 0; n < n_fft2; n++) {
-            ((double *)buf1)[n] = 
+            ((double *)buf1)[n] =
                 ((double *)buf1)[n] * (1.0 - d * (double)n) +
                 ((double *)buf2)[n] * d * (double)n;
         }
@@ -365,7 +376,7 @@ convolver_crossfade_inplace(void *input_cbuf,
     convolver_mixnscale(&buffer_cbuf, input_cbuf, &scale, 1,
                         CONVOLVER_MIXMODE_INPUT);
 }
-    
+
 void
 convolver_dirac_convolve_inplace(void *cbuf)
 {
@@ -446,7 +457,7 @@ convolver_convolve_eval(void *input_cbuf,
 #define REAL2RAW_NAME real2rawf_no_dither
 #define REAL2INT_CALL ditherd_real2int_no_dither(((float *)realbuf)[n], rmin,  \
                                                  rmax, imin, imax, overflow)
-#define REAL2RAW_EXTRA_PARAMS 
+#define REAL2RAW_EXTRA_PARAMS
 #include "real2raw.h"
 #undef REAL2RAW_NAME
 #undef REAL2INT_CALL
@@ -469,7 +480,7 @@ convolver_convolve_eval(void *input_cbuf,
 #define REAL2RAW_NAME real2rawd_no_dither
 #define REAL2INT_CALL ditherd_real2int_no_dither(((double *)realbuf)[n], rmin, \
                                                  rmax, imin, imax, overflow)
-#define REAL2RAW_EXTRA_PARAMS 
+#define REAL2RAW_EXTRA_PARAMS
 #include "real2raw.h"
 #undef REAL2RAW_NAME
 #undef REAL2INT_CALL
@@ -567,7 +578,7 @@ convolver_coeffs2cbuf(void *coeffs,
     convolver_mixnscale(&rcoeffs, coeffs_data, &scale, 1,
 			CONVOLVER_MIXMODE_INPUT);
     efree(rcoeffs);
-    
+
     return coeffs_data;
 }
 
@@ -577,7 +588,7 @@ convolver_runtime_coeffs2cbuf(void *src,  /* nfft / 2 */
 {
     static void *tmp = NULL;
     double scale;
-    
+
     if (tmp == NULL) {
         tmp = emallocaligned(n_fft * realsize);
     }
@@ -599,7 +610,7 @@ convolver_verify_cbuf(void *cbufs[],
                       int n_cbufs)
 {
     int n, i;
-    
+
     for (n = 0; n < n_cbufs; n++) {
         if (realsize == 4) {
             for (i = 0; i < n_fft; i++) {
@@ -636,7 +647,7 @@ convolver_debug_dump_cbuf(const char filename[],
         return;
     }
     coeffs = emallocaligned(n_fft * realsize);
-    scale = 1.0;    
+    scale = 1.0;
     for (n = 0; n < n_cbufs; n++) {
         convolver_mixnscale(&cbufs[n], coeffs, &scale, 1,
                             CONVOLVER_MIXMODE_OUTPUT);
@@ -680,7 +691,7 @@ convolver_fftplan(int order,
 
 struct _td_conv_t_ {
     void *fftplan;
-    void *ifftplan;    
+    void *ifftplan;
     void *coeffs;
     int blocklen;
 };
@@ -702,7 +713,7 @@ convolver_td_new(void *coeffs,
     td_conv_t *tdc;
     double scaled;
     float scalef;
-    
+
     if ((blocklen = convolver_td_block_length(n_coeffs)) == -1) {
         return NULL;
     }
@@ -742,7 +753,7 @@ convolve_inplace_ordered(void *cbuf,
     int n, size2 = size >> 1;
     if (realsize == 4) {
         float a, *b = (float *)cbuf, *c = (float *)coeffs;
-        
+
         b[0] *= c[0];
         for (n = 1; n < size2; n++) {
             a = b[n];
@@ -752,7 +763,7 @@ convolve_inplace_ordered(void *cbuf,
         b[size2] *= c[size2];
     } else {
         double a, *b = (double *)cbuf, *c = (double *)coeffs;
-        
+
         b[0] *= c[0];
         for (n = 1; n < size2; n++) {
             a = b[n];
@@ -845,6 +856,6 @@ convolver_init(const char config_filename[],
         }
         fclose(stream);
     }
-    
+
     return true;
 }

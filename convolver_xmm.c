@@ -4,10 +4,16 @@
  * This program is open source. For license terms, see the LICENSE file.
  *
  */
+
+
+#if defined(__SSE__)
 #include "asmprot.h"
-
 #include <xmmintrin.h>
+#else
+#include "SSE2NEON.h"
+#endif
 
+#if defined(__SSE__) || defined(__ARM_NEON__)
 void
 convolver_sse_convolve_add(void *input_cbuf,
 			   void *coeffs,
@@ -31,7 +37,7 @@ convolver_sse_convolve_add(void *input_cbuf,
     ((float *)d)[0] = d1s;
     ((float *)d)[4] = d2s;
 }
-
+#endif
 #ifdef __SSE2__
 
 void
