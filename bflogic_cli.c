@@ -113,7 +113,7 @@ static int block_length;
 
 static bool_t print_peak_updates = false;
 static bool_t print_prompt = true;
-static bool_t print_commands = false;
+static bool_t print_commands = true;
 static bool_t debug = false;
 static char error[1024];
 
@@ -169,7 +169,7 @@ static void
 commit_changes(FILE *stream)
 {
     int n, i;
-    
+
     FOR_IN_AND_OUT {
         for (n = 0; n < n_channels[IO]; n++) {
             if (newstate.delay[IO][n] != -1) {
@@ -213,7 +213,7 @@ static bool_t
 are_changes(void)
 {
     int n;
-    
+
     FOR_IN_AND_OUT {
         for (n = 0; n < n_channels[IO]; n++) {
             if (newstate.delay[IO][n] != -1 ||
@@ -237,7 +237,7 @@ print_overflows(FILE *stream)
 {
     double peak;
     int n;
-    
+
     fprintf(stream, "peak: ");
     for (n = 0; n < n_channels[OUT]; n++) {
 	peak = (volatile double)bfaccess->overflow[n].largest;
@@ -247,7 +247,7 @@ print_overflows(FILE *stream)
 	if (peak != 0.0) {
 	    if ((peak = 20.0 * log10(peak / bfaccess->overflow[n].max))
                 == 0.0)
-	    {                
+	    {
 		peak = -0.0;
 	    }
             fprintf(stream, "%d/%u/%+.2f ", n,
@@ -322,7 +322,7 @@ get_id(FILE *stream,
 			"\"%s\".\n", str);
 		return false;
 	    }
-	    break;	    
+	    break;
 	case INPUT_ID:
 	case OUTPUT_ID:
 	    io = (type == INPUT_ID) ? IN : OUT;
@@ -348,7 +348,7 @@ get_id(FILE *stream,
 	    fprintf(stream, "Negative number (%d) is not allowed.\n", *id);
 	    return false;
 	}
-	switch (type) {	    
+	switch (type) {
 	case FILTER_ID:
 	    io = -2;
 	    if (*id >= n_filters) {
@@ -371,7 +371,7 @@ get_id(FILE *stream,
 			(io == IN) ? "Input" : "Output", *id);
 		return false;
 	    }
-	    break;	    
+	    break;
 	}
     }
     if (io != -1 && rid != -1) {
@@ -417,7 +417,7 @@ parse_command(FILE *stream,
     const char **names;
     double att;
     char *p;
-
+    printf ("FJH parse_command %s\n" ,cmd);
     if (strcmp(cmd, "lf") == 0) {
 	fprintf(stream, "Filters:\n");
 	for (n = 0; n < n_filters; n++) {
@@ -456,7 +456,7 @@ parse_command(FILE *stream,
 		fprintf(stream, (IO == IN) ? "      from filters: " :
 			"      to filters:   ");
 		for (i = 0; i < filters[n].n_filters[IO]; i++) {
-		    if (IO == IN) {                        
+		    if (IO == IN) {
                         if (fctrl[n].fscale[i] < 0) {
                             att = -20.0 * log10(-fctrl[n].fscale[i]);
                         } else {
@@ -506,7 +506,7 @@ parse_command(FILE *stream,
                     bfaccess->get_subdelay(OUT, n),
 		    bfaccess->ismuted(OUT, n) ? "(muted)" : "");
 	}
-	fprintf(stream, "\n");	
+	fprintf(stream, "\n");
     } else if (strcmp(cmd, "lm") == 0) {
 	names = bfaccess->bflogic_names(&i);
 	if (names != NULL) {
@@ -514,7 +514,7 @@ parse_command(FILE *stream,
 	    for (n = 0; n < i; n++) {
 		fprintf(stream, "  %d: \"%s\"\n", n, names[n]);
 	    }
-	    fprintf(stream, "\n");	
+	    fprintf(stream, "\n");
 	}
 	FOR_IN_AND_OUT {
 	    names = bfaccess->bfio_names(IO, &i);
@@ -526,7 +526,7 @@ parse_command(FILE *stream,
 		    fprintf(stream, "  %d (%d - %d): \"%s\"\n",
 			    n, range[0], range[1], names[n]);
 		}
-		fprintf(stream, "\n");	
+		fprintf(stream, "\n");
 	    }
 	}
     } else if (strstr(cmd, "cffa") == cmd) {
@@ -766,6 +766,8 @@ parse_command(FILE *stream,
 	fprintf(stream, "Unknown command \"%s\", type \"help\" for help.\n",
 		cmd);
     }
+    printf ("FJH parse_command leave\n");
+
     return true;
 }
 
@@ -779,7 +781,7 @@ wait_data(FILE *client_stream,
     int n;
 
     FD_ZERO(&rfds);
-    
+
     do {
 	FD_SET(client_fd, &rfds);
 	FD_SET(callback_fd, &rfds);
@@ -863,7 +865,7 @@ parse(FILE *stream,
         bfaccess->control_mutex(1);
         commit_changes(stream);
         bfaccess->control_mutex(0);
-    }    
+    }
     return !do_quit;
 }
 
@@ -990,7 +992,7 @@ parse_string(FILE *stream,
              char cmd[MAXCMDLINE])
 {
     int slen, n, i;
-    
+
     slen = strlen(inbuf);
     cmd[0] = '\0';
     for (n = 0, i = 0; n < slen; n++) {
@@ -1029,8 +1031,8 @@ stream_loop(int event_fd,
             FILE *outstream)
 {
     char inbuf[MAXCMDLINE], cmd[MAXCMDLINE];
-    
-    inbuf[MAXCMDLINE - 1] = '\0';	
+
+    inbuf[MAXCMDLINE - 1] = '\0';
     while (true) {
         wait_data(outstream, infd, event_fd);
         if (fgets(inbuf, MAXCMDLINE - 1, instream) == NULL) {
@@ -1049,7 +1051,7 @@ socket_loop(int event_fd,
     char inbuf[MAXCMDLINE], cmd[MAXCMDLINE];
     FILE *stream;
     int sock;
-    
+
     while (true) {
 	wait_data(NULL, lsock, event_fd);
 	if ((sock = accept(lsock, NULL, NULL)) == -1) {
@@ -1060,15 +1062,20 @@ socket_loop(int event_fd,
 	    fprintf(stderr, "CLI: fdopen failed: %s.\n", strerror(errno));
 	    bfaccess->exit(BF_EXIT_OTHER);
 	}
+    printf("FJH socket_loop open\n");
 	setvbuf(stream, NULL, _IOLBF, 0);
-
+    setbuf(stream, NULL);
 	fprintf(stream, WELCOME_TEXT);
 	fprintf(stream, PROMPT_TEXT);
-	
+    fflush(stream);
+    printf("FJH socket_loop wait\n");
+    usleep(1000);
 	wait_data(stream, sock, event_fd);
-	cmd[MAXCMDLINE - 1] = '\0';	
+    printf("FJH socket_loop wait_xx\n");
+	cmd[MAXCMDLINE - 1] = '\0';
 	while (fgets(inbuf, MAXCMDLINE - 1, stream) != NULL) {
             parse_string(stream, inbuf, cmd);
+            printf("FJH socket_loop %s\n", cmd);
 	    if (!parse(stream, cmd, NULL)) {
 		break;
 	    }
@@ -1077,6 +1084,7 @@ socket_loop(int event_fd,
 	    }
 	    wait_data(stream, sock, event_fd);
 	}
+    printf("FJH socket_loop leave\n");
 	print_peak_updates = false;
 	fclose(stream);
     }
@@ -1180,7 +1188,7 @@ bflogic_preinit(int *version_major,
             return -1;
         }
     }
-    
+
     n_coeffs = _n_coeffs;
     n_maxblocks = _n_maxblocks;
     block_length = _block_length;
@@ -1194,7 +1202,7 @@ bflogic_preinit(int *version_major,
         if (port == -1 && lport == NULL) {
             fprintf(stderr, "CLI: \"port\" or \"script\" must be set.\n");
             return -1;
-        }    
+        }
         bfevents->fdevents = BF_FDEVENT_PEAK;
         *fork_mode = BF_FORK_PRIO_MAX;
     } else {
@@ -1202,7 +1210,7 @@ bflogic_preinit(int *version_major,
             fprintf(stderr, "CLI: Cannot have both \"script\" and \"port\" "
                     "set.\n");
             return -1;
-        }    
+        }
         bfevents->block_start = block_start;
         *fork_mode = BF_FORK_DONT_FORK;
     }
@@ -1239,7 +1247,7 @@ bflogic_init(struct bfaccess *_bfaccess,
 
     bfaccess = _bfaccess;
     fctrl = _bfaccess->fctrl;
-    
+
     if (script != NULL) {
         return 0;
     }
@@ -1285,7 +1293,7 @@ bflogic_init(struct bfaccess *_bfaccess,
                 newtio.c_cc[_n] = _POSIX_VDISABLE;
             }
         }
-#endif    
+#endif
         if (tcflush(fd, TCIFLUSH) == -1) {
             fprintf(stderr, "CLI: tcflush failed: %s.\n", strerror(errno));
             bfaccess->exit(BF_EXIT_OTHER);
@@ -1300,9 +1308,9 @@ bflogic_init(struct bfaccess *_bfaccess,
         }
         setvbuf(stream, NULL, _IOLBF, 0);
         WRITE_TO_SYNCH_FD;
-        
+
         stream_loop(event_fd, fd, stream, stream);
-        
+
     } else if (port != -1 && port2 != -1) {
         /* pipe interface */
 	if ((instream = fdopen(port, "r")) == NULL) {
@@ -1340,7 +1348,7 @@ bflogic_init(struct bfaccess *_bfaccess,
 	    fprintf(stderr, "CLI: Failed to set socket options: %s.\n",
 		    strerror(errno));
 	    bfaccess->exit(BF_EXIT_OTHER);
-	}    
+	}
 	if (bind(lsock, (struct sockaddr *)&s_in, sizeof(struct sockaddr_in))
 	    == -1)
 	{
@@ -1354,9 +1362,9 @@ bflogic_init(struct bfaccess *_bfaccess,
 	    bfaccess->exit(BF_EXIT_OTHER);
 	}
         WRITE_TO_SYNCH_FD;
-        
+
         socket_loop(event_fd, lsock);
-        
+
     } else if (lport != NULL) {
         /* local socket interface */
         remove(lport);
@@ -1387,12 +1395,12 @@ bflogic_init(struct bfaccess *_bfaccess,
 	    fprintf(stderr, "CLI: Failed to listen on local "
                     "socket \"%s\": %s.\n", s_un.sun_path, strerror(errno));
 	    bfaccess->exit(BF_EXIT_OTHER);
-	}	
+	}
 	free(lport);
         WRITE_TO_SYNCH_FD;
-        
+
         socket_loop(event_fd, lsock);
-        
+
     } else {
         fprintf(stderr, "CLI: No port specified.\n");
         bfaccess->exit(BF_EXIT_OTHER);

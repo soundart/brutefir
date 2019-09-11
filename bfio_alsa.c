@@ -24,6 +24,7 @@
 #include "inout.h"
 
 #define ERRORSIZE 1024
+#include <unistd.h>
 
 struct alsa_access_state {
     snd_pcm_t *handle;
@@ -80,7 +81,7 @@ set_params(snd_pcm_t *handle,
 		"of 2.\n", period_size);
 	return false;
     }
-    
+
     switch (sample_format) {
     case BF_SAMPLE_FORMAT_S8:
 	format = SND_PCM_FORMAT_S8;
@@ -146,7 +147,7 @@ set_params(snd_pcm_t *handle,
 		snd_strerror(err));
 	return false;
     }
-    
+
     if (snd_pcm_hw_params_set_access(handle, params,
 				     SND_PCM_ACCESS_RW_INTERLEAVED) < 0)
     {
@@ -171,7 +172,7 @@ set_params(snd_pcm_t *handle,
 	sprintf(errstr, "  Failed to set sample rate to %d Hz: %s.\n",
 		sample_rate, snd_strerror(err));
 	return false;
-    }    
+    }
     /* accept a minor variation in sample rate */
     if (un != sample_rate && !((int)((double)sample_rate * 0.99) < un &&
                                (int)((double)sample_rate / 0.99) > un))
@@ -180,7 +181,7 @@ set_params(snd_pcm_t *handle,
                 "suggested %u Hz instead.\n", sample_rate, un);
         return false;
     }
-    
+
     if ((err = snd_pcm_hw_params_set_format(handle, params, format)) < 0) {
 	sprintf(errstr, "  Failed to set sample format to %s: %s.\n",
 		bf_strsampleformat(sample_format), snd_strerror(err));
@@ -192,7 +193,7 @@ set_params(snd_pcm_t *handle,
 	sprintf(errstr, "  Failed to set channel count to %d: %s.\n",
 		open_channels, snd_strerror(err));
 	return false;
-    }    
+    }
 
     snd_pcm_hw_params_get_periods_max(params, &un, NULL);
     if (un < 2) {
@@ -200,9 +201,9 @@ set_params(snd_pcm_t *handle,
 	sprintf(errstr,
 "  Hardware does not support enough periods. At least 2 is required, but the\n\
   hardware supports only %u.\n", un);
-	return false;	
+	return false;
     }
-    
+
     /* try to get a hardware fragment size close to the software size */
     hw_period_size = period_size;
     snd_pcm_hw_params_set_period_size_near(handle, params, &hw_period_size,
@@ -247,7 +248,7 @@ set_params(snd_pcm_t *handle,
                 snd_strerror(err));
         return false;
     }
-    
+
     snd_pcm_hw_params_get_period_size(params, &hw_period_size, NULL);
     *hardware_period_size = (int)hw_period_size;
     if ((err = snd_pcm_sw_params_set_avail_min(handle, swparams, 1)) < 0) {
@@ -255,7 +256,7 @@ set_params(snd_pcm_t *handle,
                 snd_strerror(err));
         return false;
     }
-    
+
     if ((err = snd_pcm_sw_params(handle, swparams)) < 0) {
 	sprintf(errstr, "  Unable to install sw params: %s.\n",
 		snd_strerror(err));
@@ -265,11 +266,11 @@ set_params(snd_pcm_t *handle,
 	sprintf(errstr, "  Unable to prepare audio: %s.\n", snd_strerror(err));
 	return false;
     }
-    
+
     if (debug) {
         snd_pcm_dump(handle, out);
     }
-    
+
     return true;
 }
 
@@ -293,7 +294,7 @@ bfio_preinit(int *version_major,
              int _debug)
 {
     static bool_t has_been_called = false;
-    
+
     struct settings *settings;
     union bflexval lexval;
     int err, token, ver;
@@ -305,14 +306,14 @@ bfio_preinit(int *version_major,
         return NULL;
     }
     debug = !!_debug;
-    
+
     if (!has_been_called &&
         (err = snd_output_stdio_attach(&out, stderr, 0)) != 0)
     {
 	fprintf(stderr, "ALSA I/O: Unable to attach output: %s.\n",
                 snd_strerror(err));
         return NULL;
-    }   
+    }
 
     settings = malloc(sizeof(struct settings));
     memset(settings, 0, sizeof(struct settings));
@@ -347,7 +348,7 @@ bfio_preinit(int *version_major,
             return NULL;
         }
         GET_TOKEN(BF_LEX_EOS, "expected end of statement (;).\n");
-    }    
+    }
     if (settings->device == NULL) {
         fprintf(stderr, "ALSA I/O: Parse error: device not set.\n");
         return NULL;
@@ -356,7 +357,7 @@ bfio_preinit(int *version_major,
         fprintf(stderr, "ALSA I/O: No support for AUTO sample format.\n");
         return NULL;
     }
-    
+
     *uses_sample_clock = 1;
 
     has_been_called = true;
@@ -426,7 +427,7 @@ bfio_init(void *params,
 	}
     }
     n_handles[io]++;
-        
+
     fd2as[pollfd.fd].handle = handle;
     fd2as[pollfd.fd].isinterleaved = *isinterleaved;
     fd2as[pollfd.fd].ignore_xrun = settings->ignore_xrun;
@@ -456,11 +457,11 @@ bfio_synch_start(void)
 {
     snd_pcm_status_t *status;
     int err, n;
-    
+
     if (base_handle == NULL) {
         return 0;
     }
-
+    fprintf(stderr, "sleeping 01\n");
     /* FIXME: the SND_PCM_STATE_RUNNING code would not be needed if the
        bfio_write autostart hack was not there */
     snd_pcm_status_alloca(&status);
@@ -473,7 +474,7 @@ bfio_synch_start(void)
         }
         if (snd_pcm_status_get_state(status) == SND_PCM_STATE_RUNNING) {
             return 0;
-        }    
+        }
         if ((err = snd_pcm_start(base_handle)) < 0) {
             fprintf(stderr, "ALSA I/O: Could not start audio: %s.\n",
                     snd_strerror(err));
@@ -481,7 +482,8 @@ bfio_synch_start(void)
         }
         return 0;
     }
-        
+
+    fprintf(stderr, "sleeping 02\n");
     FOR_IN_AND_OUT {
         for (n = 0; n < n_handles[IO]; n++) {
             if ((err = snd_pcm_status(handles[IO][n], status)) < 0) {
@@ -492,7 +494,7 @@ bfio_synch_start(void)
             if (snd_pcm_status_get_state(status) == SND_PCM_STATE_RUNNING) {
                 continue;
             }
-            
+
             if ((err = snd_pcm_start(handles[IO][n])) < 0) {
                 fprintf(stderr, "ALSA I/O: Could not start audio: %s.\n",
                         snd_strerror(err));
@@ -529,15 +531,15 @@ bfio_read(int fd,
     uint8_t *ptr;
 
  bfio_read_restart:
-    
+
     if (as->isinterleaved) {
-	i = as->sample_size * as->open_channels;	
+	i = as->sample_size * as->open_channels;
 	if ((n = snd_pcm_readi(as->handle, &((uint8_t *)buf)[offset],
                                count / i)) < 0)
         {
             goto bfio_read_error;
 	}
-    } else {    
+    } else {
         ptr = (uint8_t *)buf;
         ptr += offset / as->used_channels;
         for (n = 0; n < as->used_channels; n++) {
@@ -548,7 +550,7 @@ bfio_read(int fd,
         if ((n = snd_pcm_readn(as->handle, as->bufs.ptr, count / i)) < 0) {
             goto bfio_read_error;
         }
-    }    
+    }
     return n * i;
 
  bfio_read_error:
