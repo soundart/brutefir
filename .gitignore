@@ -1,0 +1,5 @@
+/bfconf_lexical.c
+*.o
+*~
+build/
+debian-src/
