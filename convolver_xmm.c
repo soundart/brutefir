@@ -10,7 +10,7 @@
 #include "asmprot.h"
 #include <xmmintrin.h>
 #else
-#include "SSE2NEON.h"
+#include "sse2neon.h"
 #endif
 
 #if defined(__SSE__) || defined(__ARM_NEON__)
