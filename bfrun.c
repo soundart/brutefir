@@ -2805,6 +2805,7 @@ bf_exit(int status)
         for (n = 0; n < icomm->n_pids; n++) {
             if ((other = icomm->pids[n]) != 0) {
                 kill(other, SIGTERM);
+                kill(other, SIGKILL);
             }
         }
     }
