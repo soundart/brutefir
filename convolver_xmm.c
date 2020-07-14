@@ -10,10 +10,9 @@
 #include "asmprot.h"
 #include <xmmintrin.h>
 #else
-#include "sse2neon.h"
 #endif
 
-#if defined(__SSE__) || defined(__ARM_NEON__)
+#if defined(__SSE__)
 void
 convolver_sse_convolve_add(void *input_cbuf,
 			   void *coeffs,

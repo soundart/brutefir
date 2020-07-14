@@ -282,19 +282,12 @@ convolver_convolve_add(void *input_cbuf,
     default:
     case OPT_CODE_GCC:
         // https://github.com/FFTW/fftw3/commit/950b153910f7f0dde9cc20cddeee5dc9048d25b7
-#if defined(__ARM_NEON__)
-#warning Generating NEON code
-        // no runtime config for ARM neon
-        convolver_sse_convolve_add(input_cbuf, coeffs, output_cbuf,
-                                   n_fft >> 3);
-#else
 #warning Generating  code
         if (realsize == 4) {
             convolve_addf(input_cbuf, coeffs, output_cbuf);
         } else {
             convolve_addd(input_cbuf, coeffs, output_cbuf);
         }
-#endif
     }
     /*
     {
