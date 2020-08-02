@@ -38,7 +38,7 @@ convolver_sse_convolve_add(void *input_cbuf,
     ((float *)d)[4] = d2s;
 }
 #endif
-#ifdef __SSE2__
+#ifdef __SSE2__ || defined(__ARM_NEON__)
 
 void
 convolver_sse2_convolve_add(void *input_cbuf,
